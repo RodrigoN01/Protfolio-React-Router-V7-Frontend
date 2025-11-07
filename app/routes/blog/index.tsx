@@ -1,6 +1,9 @@
+import { useState } from "react";
 import type { Route } from "./+types/index";
 import type { PostMeta } from "~/types";
 import PostCard from "~/components/PostCard";
+import Pagination from "~/components/Pagination";
+import PostFilter from "~/components/PostFilter";
 
 export async function loader({
   request,
@@ -20,14 +23,48 @@ export async function loader({
 }
 
 const BlogPage = ({ loaderData }: Route.ComponentProps) => {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const postsPerPage = 10;
+
   const { posts } = loaderData;
+
+  const filteredPosts = posts.filter(
+    (post) =>
+      post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      post.excerpt.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const totalPages = Math.ceil(filteredPosts.length / postsPerPage);
+
+  const indexOfLastPost = currentPage * postsPerPage;
+  const indexOfFirstPost = indexOfLastPost - postsPerPage;
+  const currentPosts = filteredPosts.slice(indexOfFirstPost, indexOfLastPost);
 
   return (
     <div className='m-w-3xl mx-auto mt-10 px-6 py-6 bg-gray-900'>
       <h2 className='text-3xl text-white font-bold mb-8'>📝 Blog</h2>
-      {posts.map((post) => (
-        <PostCard key={post.slug} post={post} />
-      ))}
+      <PostFilter
+        searchQuery={searchQuery}
+        onSearchChange={(query) => {
+          setSearchQuery(query);
+          setCurrentPage(1);
+        }}
+      />
+      <div className='space-y-8'>
+        {currentPosts.length === 0 ? (
+          <p className='text-gray-400 text-center'>No posts found.</p>
+        ) : (
+          currentPosts.map((post) => <PostCard key={post.slug} post={post} />)
+        )}
+      </div>
+      {totalPages > 1 && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={(page) => setCurrentPage(page)}
+        />
+      )}
     </div>
   );
 };
